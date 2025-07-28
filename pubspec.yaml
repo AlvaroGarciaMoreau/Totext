@@ -44,8 +44,8 @@ dependencies:
   # OCR functionality - using newer version
   google_mlkit_text_recognition: ^0.13.0
   
-  # Speech to text - Temporalmente comentado por problemas de compatibilidad
-  # speech_to_text: ^6.6.2
+  # Speech to text
+  speech_to_text: ^7.0.0
   
   # Permission handling
   permission_handler: ^11.3.0

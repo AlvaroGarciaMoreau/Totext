@@ -3,7 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:camera/camera.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
-// import 'package:speech_to_text/speech_to_text.dart'; // Temporalmente comentado
+import 'package:speech_to_text/speech_to_text.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:share_plus/share_plus.dart';
 import 'dart:io';
@@ -56,8 +56,8 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   String _extractedText = '';
   bool _isLoading = false;
-  // final SpeechToText _speechToText = SpeechToText(); // Temporalmente comentado
-  final bool _speechEnabled = false; // Temporalmente deshabilitado
+  final SpeechToText _speechToText = SpeechToText();
+  bool _speechEnabled = false;
   bool _isListening = false;
   List<TextEntry> _textHistory = [];
   int _selectedIndex = 0;
@@ -67,7 +67,7 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
-    // _initSpeech(); // Temporalmente comentado
+    _initSpeech();
     _loadData();
   }
 
@@ -77,10 +77,10 @@ class _HomePageState extends State<HomePage> {
     super.dispose();
   }
 
-  // void _initSpeech() async {
-  //   _speechEnabled = await _speechToText.initialize();
-  //   setState(() {});
-  // }
+  Future<void> _initSpeech() async {
+    _speechEnabled = await _speechToText.initialize();
+    setState(() {});
+  }
 
   Future<void> _loadData() async {
     // Cargar historial de textos
@@ -194,11 +194,6 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _startListening() async {
-    // Funcionalidad temporalmente deshabilitada debido a problemas de compatibilidad
-    _showError('Funcionalidad de voz temporalmente no disponible');
-    return;
-    
-    /* Código comentado temporalmente
     if (!_speechEnabled) {
       _showError('El reconocimiento de voz no está disponible');
       return;
@@ -209,6 +204,7 @@ class _HomePageState extends State<HomePage> {
     setState(() {
       _isListening = true;
       _extractedText = 'Escuchando...';
+      _textController.text = 'Escuchando...';
     });
 
     await _speechToText.listen(
@@ -217,6 +213,7 @@ class _HomePageState extends State<HomePage> {
         
         setState(() {
           _extractedText = recognizedText;
+          _textController.text = recognizedText;
         });
         
         // Si el resultado es final y no está vacío, guardarlo
@@ -238,24 +235,17 @@ class _HomePageState extends State<HomePage> {
       partialResults: true,
       localeId: 'es_ES',
     );
-    */
   }
 
   Future<void> _stopListening() async {
-    // Funcionalidad temporalmente deshabilitada
-    setState(() {
-      _isListening = false;
-    });
-    
-    /* Código comentado temporalmente
     await _speechToText.stop();
     setState(() {
       _isListening = false;
       if (_extractedText == 'Escuchando...') {
         _extractedText = 'No se detectó ningún audio';
+        _textController.text = 'No se detectó ningún audio';
       }
     });
-    */
   }
 
   void _shareText() {
@@ -378,26 +368,7 @@ class _HomePageState extends State<HomePage> {
         ],
       ),
       body: _selectedIndex == 0 ? _buildMainView() : _buildHistoryView(),
-      bottomNavigationBar: _selectedIndex == 0 
-          ? _buildBottomAppBarWithButtons()
-          : BottomNavigationBar(
-              currentIndex: _selectedIndex,
-              onTap: (index) {
-                setState(() {
-                  _selectedIndex = index;
-                });
-              },
-              items: const [
-                BottomNavigationBarItem(
-                  icon: Icon(Icons.home),
-                  label: 'Inicio',
-                ),
-                BottomNavigationBarItem(
-                  icon: Icon(Icons.history),
-                  label: 'Historial',
-                ),
-              ],
-            ),
+      bottomNavigationBar: _buildBottomAppBarWithButtons(),
     );
   }
 
@@ -450,7 +421,7 @@ class _HomePageState extends State<HomePage> {
                               constraints: const BoxConstraints(minHeight: 200),
                               child: Text(
                                 _extractedText.isEmpty
-                                    ? 'El texto extraído aparecerá aquí...\n\n• Toca el botón de cámara para tomar una foto y extraer texto\n• Selecciona de galería para procesar imágenes existentes\n• Una vez que tengas texto, podrás editarlo y compartirlo\n• Ve al historial para revisar textos anteriores\n\nNota: La funcionalidad de voz está temporalmente deshabilitada por problemas de compatibilidad.'
+                                    ? 'El texto extraído aparecerá aquí...\n\n• Toca el botón de cámara para tomar una foto y extraer texto\n• Selecciona de galería para procesar imágenes existentes\n• Usa el micrófono para convertir tu voz en texto\n• Una vez que tengas texto, podrás editarlo y compartirlo\n• Ve al historial para revisar textos anteriores'
                                     : '$_extractedText\n\n(Toca para editar)',
                                 style: TextStyle(
                                   fontSize: 16,
@@ -660,16 +631,24 @@ class _HomePageState extends State<HomePage> {
             color: Colors.grey.shade300,
           ),
           
-          // Botón de micrófono (deshabilitado)
+          // Botón de micrófono
           Expanded(
             child: IconButton(
-              onPressed: _startListening,
+              onPressed: _speechEnabled 
+                  ? (_isListening ? _stopListening : _startListening)
+                  : () => _showError('Reconocimiento de voz no disponible'),
               icon: Icon(
-                Icons.mic_off,
+                _isListening ? Icons.mic : (_speechEnabled ? Icons.mic : Icons.mic_off),
                 size: 32,
-                color: Colors.grey.shade400,
+                color: _isListening 
+                    ? Colors.red 
+                    : (_speechEnabled 
+                        ? Theme.of(context).colorScheme.onSurface 
+                        : Colors.grey.shade400),
               ),
-              tooltip: 'Voz (no disponible)',
+              tooltip: _isListening 
+                  ? 'Detener grabación' 
+                  : (_speechEnabled ? 'Grabar voz' : 'Voz no disponible'),
             ),
           ),
           
