@@ -589,7 +589,7 @@ class _HomePageState extends State<HomePage> {
         children: [
           // Botón de navegación a Inicio
           Expanded(
-            child: TextButton.icon(
+            child: IconButton(
               onPressed: () {
                 setState(() {
                   _selectedIndex = 0;
@@ -597,18 +597,12 @@ class _HomePageState extends State<HomePage> {
               },
               icon: Icon(
                 Icons.home,
+                size: 32,
                 color: _selectedIndex == 0 
                     ? Theme.of(context).colorScheme.primary 
                     : Theme.of(context).colorScheme.onSurface,
               ),
-              label: Text(
-                'Inicio',
-                style: TextStyle(
-                  color: _selectedIndex == 0 
-                      ? Theme.of(context).colorScheme.primary 
-                      : Theme.of(context).colorScheme.onSurface,
-                ),
-              ),
+              tooltip: 'Inicio',
             ),
           ),
           
@@ -621,7 +615,7 @@ class _HomePageState extends State<HomePage> {
           
           // Botón de cámara
           Expanded(
-            child: TextButton.icon(
+            child: IconButton(
               onPressed: _isLoading ? null : () {
                 showModalBottomSheet(
                   context: context,
@@ -651,8 +645,11 @@ class _HomePageState extends State<HomePage> {
                   },
                 );
               },
-              icon: const Icon(Icons.camera_alt),
-              label: const Text('Cámara'),
+              icon: const Icon(
+                Icons.camera_alt,
+                size: 32,
+              ),
+              tooltip: 'Cámara',
             ),
           ),
           
@@ -665,16 +662,14 @@ class _HomePageState extends State<HomePage> {
           
           // Botón de micrófono (deshabilitado)
           Expanded(
-            child: TextButton.icon(
+            child: IconButton(
               onPressed: _startListening,
               icon: Icon(
                 Icons.mic_off,
+                size: 32,
                 color: Colors.grey.shade400,
               ),
-              label: Text(
-                'Voz',
-                style: TextStyle(color: Colors.grey.shade400),
-              ),
+              tooltip: 'Voz (no disponible)',
             ),
           ),
           
@@ -687,7 +682,7 @@ class _HomePageState extends State<HomePage> {
           
           // Botón de navegación a Historial
           Expanded(
-            child: TextButton.icon(
+            child: IconButton(
               onPressed: () {
                 setState(() {
                   _selectedIndex = 1;
@@ -695,18 +690,12 @@ class _HomePageState extends State<HomePage> {
               },
               icon: Icon(
                 Icons.history,
+                size: 32,
                 color: _selectedIndex == 1 
                     ? Theme.of(context).colorScheme.primary 
                     : Theme.of(context).colorScheme.onSurface,
               ),
-              label: Text(
-                'Historial',
-                style: TextStyle(
-                  color: _selectedIndex == 1 
-                      ? Theme.of(context).colorScheme.primary 
-                      : Theme.of(context).colorScheme.onSurface,
-                ),
-              ),
+              tooltip: 'Historial',
             ),
           ),
         ],
