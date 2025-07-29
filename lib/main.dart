@@ -1,14 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:camera/camera.dart';
-import 'package:image_picker/image_picker.dart';
-import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
-import 'package:speech_to_text/speech_to_text.dart';
-import 'package:permission_handler/permission_handler.dart';
 import 'package:share_plus/share_plus.dart';
 import 'dart:io';
+
+// Importar modelos y servicios
 import 'models/text_entry.dart';
 import 'services/storage_service.dart';
+import 'services/ocr_service.dart';
+import 'services/speech_service.dart';
+import 'services/image_service.dart';
+
+// Importar widgets
+import 'widgets/text_display_widget.dart';
+import 'widgets/history_list_widget.dart';
+import 'widgets/custom_bottom_app_bar.dart';
+import 'widgets/camera_options_sheet.dart';
+
+// Importar constantes
+import 'constants/app_constants.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -33,8 +43,8 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'ToText - OCR y Voz a Texto',
-      debugShowCheckedModeBanner: false, // Quitar debug banner
+      title: AppConstants.appTitle,
+      debugShowCheckedModeBanner: false,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
         useMaterial3: true,
@@ -56,9 +66,7 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   String _extractedText = '';
   bool _isLoading = false;
-  final SpeechToText _speechToText = SpeechToText();
-  bool _speechEnabled = false;
-  bool _isListening = false;
+  final SpeechService _speechService = SpeechService();
   List<TextEntry> _textHistory = [];
   int _selectedIndex = 0;
   bool _isEditing = false;
@@ -67,26 +75,24 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
-    _initSpeech();
+    _initServices();
     _loadData();
   }
 
   @override
   void dispose() {
     _textController.dispose();
+    OcrService.dispose();
     super.dispose();
   }
 
-  Future<void> _initSpeech() async {
-    _speechEnabled = await _speechToText.initialize();
+  Future<void> _initServices() async {
+    await _speechService.initialize();
     setState(() {});
   }
 
   Future<void> _loadData() async {
-    // Cargar historial de textos
     final history = await StorageService.loadTextEntries();
-    
-    // Cargar texto actual
     final currentData = await StorageService.loadCurrentText();
     
     setState(() {
@@ -96,168 +102,97 @@ class _HomePageState extends State<HomePage> {
     });
   }
 
-  Future<void> _requestPermissions() async {
-    await [
-      Permission.camera,
-      Permission.microphone,
-      Permission.storage,
-    ].request();
+  Future<void> _processImageFromCamera() async {
+    await _processImageSource(() => ImageService.takePhotoFromCamera());
   }
 
-  Future<void> _takePhotoAndExtractText() async {
-    setState(() {
-      _isLoading = true;
-    });
+  Future<void> _processImageFromGallery() async {
+    await _processImageSource(() => ImageService.pickImageFromGallery());
+  }
+
+  Future<void> _processImageSource(Future<File?> Function() imageSource) async {
+    setState(() => _isLoading = true);
 
     try {
-      await _requestPermissions();
-
-      final ImagePicker picker = ImagePicker();
-      final XFile? image = await picker.pickImage(
-        source: ImageSource.camera,
-        imageQuality: 80,
-      );
-
-      if (image != null) {
-        await _processImage(File(image.path));
+      final imageFile = await imageSource();
+      if (imageFile != null) {
+        final extractedText = await OcrService.extractTextFromImage(imageFile);
+        await _saveExtractedText(extractedText, AppConstants.sourceCamera);
       }
     } catch (e) {
-      _showError('Error al tomar la foto: $e');
+      _showError(e.toString());
     } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      setState(() => _isLoading = false);
     }
   }
 
-  Future<void> _pickImageFromGallery() async {
-    setState(() {
-      _isLoading = true;
-    });
-
-    try {
-      await _requestPermissions();
-
-      final ImagePicker picker = ImagePicker();
-      final XFile? image = await picker.pickImage(
-        source: ImageSource.gallery,
-        imageQuality: 80,
+  Future<void> _saveExtractedText(String text, String source) async {
+    if (text != AppConstants.statusNoTextFound) {
+      final entry = TextEntry(
+        id: TextEntry.generateId(),
+        text: text,
+        source: source,
+        timestamp: DateTime.now(),
       );
-
-      if (image != null) {
-        await _processImage(File(image.path));
-      }
-    } catch (e) {
-      _showError('Error al seleccionar la imagen: $e');
-    } finally {
-      setState(() {
-        _isLoading = false;
-      });
-    }
-  }
-
-  Future<void> _processImage(File imageFile) async {
-    try {
-      final inputImage = InputImage.fromFile(imageFile);
-      final textRecognizer = TextRecognizer(script: TextRecognitionScript.latin);
-      final RecognizedText recognizedText = await textRecognizer.processImage(inputImage);
-
-      String extractedText = recognizedText.text;
       
-      if (extractedText.isNotEmpty) {
-        // Crear nueva entrada y guardarla
-        final entry = TextEntry(
-          id: TextEntry.generateId(),
-          text: extractedText,
-          source: 'camera',
-          timestamp: DateTime.now(),
-        );
-        
-        await StorageService.addTextEntry(entry);
-        await StorageService.saveCurrentText(extractedText, 'camera');
-        await _loadData(); // Recargar datos
-        
-        setState(() {
-          _extractedText = extractedText;
-          _textController.text = extractedText;
-        });
-      } else {
-        setState(() {
-          _extractedText = 'No se encontró texto en la imagen';
-        });
-      }
-
-      textRecognizer.close();
-    } catch (e) {
-      _showError('Error al procesar la imagen: $e');
+      await StorageService.addTextEntry(entry);
+      await StorageService.saveCurrentText(text, source);
+      await _loadData();
+      
+      setState(() {
+        _extractedText = text;
+        _textController.text = text;
+      });
+    } else {
+      setState(() => _extractedText = text);
     }
   }
 
   Future<void> _startListening() async {
-    if (!_speechEnabled) {
-      _showError('El reconocimiento de voz no está disponible');
-      return;
-    }
-
-    await _requestPermissions();
-
     setState(() {
-      _isListening = true;
-      _extractedText = 'Escuchando...';
-      _textController.text = 'Escuchando...';
+      _extractedText = AppConstants.statusListening;
+      _textController.text = AppConstants.statusListening;
     });
 
-    await _speechToText.listen(
-      onResult: (result) async {
-        final recognizedText = result.recognizedWords;
-        
-        setState(() {
-          _extractedText = recognizedText;
-          _textController.text = recognizedText;
-        });
-        
-        // Si el resultado es final y no está vacío, guardarlo
-        if (result.finalResult && recognizedText.isNotEmpty) {
-          final entry = TextEntry(
-            id: TextEntry.generateId(),
-            text: recognizedText,
-            source: 'microphone',
-            timestamp: DateTime.now(),
-          );
-          
-          await StorageService.addTextEntry(entry);
-          await StorageService.saveCurrentText(recognizedText, 'microphone');
-          await _loadData(); // Recargar datos
-        }
+    await _speechService.startListening(
+      onResult: (text) async {
+        await _saveExtractedText(text, AppConstants.sourceMicrophone);
       },
-      listenFor: const Duration(seconds: 30),
-      pauseFor: const Duration(seconds: 3),
-      partialResults: true,
-      localeId: 'es_ES',
+      onError: (error) {
+        _showError(error);
+        setState(() => _extractedText = '');
+      },
     );
   }
 
   Future<void> _stopListening() async {
-    await _speechToText.stop();
-    setState(() {
-      _isListening = false;
-      if (_extractedText == 'Escuchando...') {
-        _extractedText = 'No se detectó ningún audio';
-        _textController.text = 'No se detectó ningún audio';
-      }
-    });
+    await _speechService.stopListening();
+  }
+
+  void _handleMicrophonePress() {
+    if (_speechService.isListening) {
+      _stopListening();
+    } else if (_speechService.isInitialized) {
+      _startListening();
+    } else {
+      _showError(AppConstants.errorSpeechNotAvailable);
+    }
   }
 
   void _shareText() {
     final textToShare = _isEditing ? _textController.text.trim() : _extractedText;
-    if (textToShare.isNotEmpty && 
-        textToShare != 'Escuchando...' && 
-        textToShare != 'No se detectó ningún audio' && 
-        textToShare != 'No se encontró texto en la imagen') {
-      Share.share(textToShare, subject: 'Texto extraído con ToText');
+    if (_isValidTextToShare(textToShare)) {
+      Share.share(textToShare, subject: AppConstants.shareSubject);
     } else {
-      _showError('No hay texto para compartir');
+      _showError(AppConstants.errorNoTextToShare);
     }
+  }
+
+  bool _isValidTextToShare(String text) {
+    return text.isNotEmpty && 
+           text != AppConstants.statusListening && 
+           text != AppConstants.statusNoAudioDetected && 
+           text != AppConstants.statusNoTextFound;
   }
 
   void _clearText() async {
@@ -279,7 +214,21 @@ class _HomePageState extends State<HomePage> {
   void _saveEditedText() async {
     final editedText = _textController.text.trim();
     if (editedText.isNotEmpty) {
-      await StorageService.saveCurrentText(editedText, 'edited');
+      // Crear una nueva entrada en el historial para el texto editado
+      final entry = TextEntry(
+        id: TextEntry.generateId(),
+        text: editedText,
+        source: AppConstants.sourceEdited,
+        timestamp: DateTime.now(),
+      );
+      
+      // Guardar en el historial y como texto actual
+      await StorageService.addTextEntry(entry);
+      await StorageService.saveCurrentText(editedText, AppConstants.sourceEdited);
+      
+      // Recargar los datos para actualizar la UI
+      await _loadData();
+      
       setState(() {
         _extractedText = editedText;
         _isEditing = false;
@@ -299,29 +248,28 @@ class _HomePageState extends State<HomePage> {
     setState(() {
       _extractedText = entry.text;
       _textController.text = entry.text;
-      _selectedIndex = 0; // Volver a la pestaña principal
+      _selectedIndex = 0;
       _isEditing = false;
     });
+    
+    // Recargar datos para asegurar consistencia
+    await _loadData();
   }
 
-  Future<void> _deleteHistoryEntry(String id) async {
+  void _deleteHistoryEntry(String id) async {
     await StorageService.deleteTextEntry(id);
     await _loadData();
   }
 
-  void _showHistory() {
-    setState(() {
-      _selectedIndex = 1;
-    });
-  }
-
   void _showError(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: Colors.red,
-      ),
-    );
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   @override
@@ -329,13 +277,13 @@ class _HomePageState extends State<HomePage> {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        title: Text(_selectedIndex == 0 ? 'ToText - OCR y Voz' : 'Historial'),
+        title: Text(_selectedIndex == 0 ? AppConstants.homeTitle : AppConstants.historyTitle),
         actions: [
           if (_selectedIndex == 0 && _extractedText.isNotEmpty && !_isEditing)
             IconButton(
               icon: const Icon(Icons.edit),
               onPressed: _startEditing,
-              tooltip: 'Editar texto',
+              tooltip: AppConstants.tooltipEdit,
             ),
           if (_selectedIndex == 0 && _isEditing)
             Row(
@@ -344,12 +292,12 @@ class _HomePageState extends State<HomePage> {
                 IconButton(
                   icon: const Icon(Icons.check),
                   onPressed: _saveEditedText,
-                  tooltip: 'Guardar',
+                  tooltip: AppConstants.tooltipSave,
                 ),
                 IconButton(
                   icon: const Icon(Icons.close),
                   onPressed: _cancelEditing,
-                  tooltip: 'Cancelar',
+                  tooltip: AppConstants.tooltipCancel,
                 ),
               ],
             ),
@@ -357,18 +305,24 @@ class _HomePageState extends State<HomePage> {
             IconButton(
               icon: const Icon(Icons.clear),
               onPressed: _clearText,
-              tooltip: 'Limpiar texto',
-            ),
-          if (_selectedIndex == 0)
-            IconButton(
-              icon: const Icon(Icons.history),
-              onPressed: _showHistory,
-              tooltip: 'Ver historial',
+              tooltip: AppConstants.tooltipClear,
             ),
         ],
       ),
       body: _selectedIndex == 0 ? _buildMainView() : _buildHistoryView(),
-      bottomNavigationBar: _buildBottomAppBarWithButtons(),
+      bottomNavigationBar: CustomBottomAppBar(
+        selectedIndex: _selectedIndex,
+        isLoading: _isLoading,
+        speechEnabled: _speechService.isInitialized,
+        isListening: _speechService.isListening,
+        onIndexChanged: (index) => setState(() => _selectedIndex = index),
+        onCameraPressed: () => CameraOptionsSheet.show(
+          context,
+          onTakePhoto: _processImageFromCamera,
+          onSelectGallery: _processImageFromGallery,
+        ),
+        onMicrophonePressed: _handleMicrophonePress,
+      ),
     );
   }
 
@@ -377,76 +331,28 @@ class _HomePageState extends State<HomePage> {
       padding: const EdgeInsets.all(16.0),
       child: Column(
         children: [
-          // Área de texto extraído/editable
           Expanded(
-            child: Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(16.0),
-              decoration: BoxDecoration(
-                border: Border.all(color: Colors.grey.shade300),
-                borderRadius: BorderRadius.circular(8.0),
-                color: Colors.grey.shade50,
-              ),
-              child: _isLoading
-                  ? const Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          CircularProgressIndicator(),
-                          SizedBox(height: 16),
-                          Text('Procesando...'),
-                        ],
-                      ),
-                    )
-                  : _isEditing
-                      ? TextFormField(
-                          controller: _textController,
-                          maxLines: null,
-                          expands: true,
-                          textAlignVertical: TextAlignVertical.top,
-                          decoration: const InputDecoration(
-                            border: InputBorder.none,
-                            hintText: 'Edita tu texto aquí...',
-                          ),
-                          style: const TextStyle(fontSize: 16),
-                          onChanged: (value) {
-                            // Actualizar en tiempo real mientras edita
-                          },
-                        )
-                      : SingleChildScrollView(
-                          child: GestureDetector(
-                            onTap: _extractedText.isNotEmpty ? _startEditing : null,
-                            child: Container(
-                              width: double.infinity,
-                              constraints: const BoxConstraints(minHeight: 200),
-                              child: Text(
-                                _extractedText.isEmpty
-                                    ? 'El texto extraído aparecerá aquí...\n\n• Toca el botón de cámara para tomar una foto y extraer texto\n• Selecciona de galería para procesar imágenes existentes\n• Usa el micrófono para convertir tu voz en texto\n• Una vez que tengas texto, podrás editarlo y compartirlo\n• Ve al historial para revisar textos anteriores'
-                                    : '$_extractedText\n\n(Toca para editar)',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  color: _extractedText.isEmpty ? Colors.grey.shade600 : Colors.black,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
+            child: TextDisplayWidget(
+              text: _extractedText,
+              isLoading: _isLoading,
+              isEditing: _isEditing,
+              controller: _textController,
+              onTap: _startEditing,
+              onChanged: (value) {
+                // Actualizar en tiempo real mientras edita
+              },
             ),
           ),
           
           const SizedBox(height: 16),
           
-          // Botón de compartir
-          if (_extractedText.isNotEmpty && 
-              _extractedText != 'Escuchando...' && 
-              _extractedText != 'No se detectó ningún audio' && 
-              _extractedText != 'No se encontró texto en la imagen')
+          if (_isValidTextToShare(_isEditing ? _textController.text.trim() : _extractedText))
             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
                 onPressed: _shareText,
                 icon: const Icon(Icons.share),
-                label: const Text('Compartir Texto'),
+                label: const Text(AppConstants.buttonShareText),
                 style: ElevatedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 12),
                 ),
@@ -469,231 +375,14 @@ class _HomePageState extends State<HomePage> {
           ),
           const SizedBox(height: 16),
           Expanded(
-            child: _textHistory.isEmpty
-                ? const Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.history, size: 64, color: Colors.grey),
-                        SizedBox(height: 16),
-                        Text(
-                          'No hay textos guardados aún',
-                          style: TextStyle(color: Colors.grey),
-                        ),
-                      ],
-                    ),
-                  )
-                : ListView.builder(
-                    itemCount: _textHistory.length,
-                    itemBuilder: (context, index) {
-                      final entry = _textHistory[index];
-                      return Card(
-                        margin: const EdgeInsets.only(bottom: 8),
-                        child: ListTile(
-                          leading: Icon(
-                            entry.source == 'camera' ? Icons.camera_alt : Icons.mic,
-                            color: entry.source == 'camera' ? Colors.blue : Colors.red,
-                          ),
-                          title: Text(
-                            entry.text.length > 50 
-                                ? '${entry.text.substring(0, 50)}...'
-                                : entry.text,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          subtitle: Text(
-                            '${_formatDate(entry.timestamp)} • ${entry.source == 'camera' ? 'Cámara' : 'Micrófono'}',
-                          ),
-                          trailing: PopupMenuButton(
-                            itemBuilder: (context) => [
-                              const PopupMenuItem(
-                                value: 'select',
-                                child: ListTile(
-                                  leading: Icon(Icons.check),
-                                  title: Text('Usar este texto'),
-                                ),
-                              ),
-                              const PopupMenuItem(
-                                value: 'share',
-                                child: ListTile(
-                                  leading: Icon(Icons.share),
-                                  title: Text('Compartir'),
-                                ),
-                              ),
-                              const PopupMenuItem(
-                                value: 'delete',
-                                child: ListTile(
-                                  leading: Icon(Icons.delete, color: Colors.red),
-                                  title: Text('Eliminar'),
-                                ),
-                              ),
-                            ],
-                            onSelected: (value) {
-                              switch (value) {
-                                case 'select':
-                                  _selectTextFromHistory(entry);
-                                  break;
-                                case 'share':
-                                  Share.share(entry.text, subject: 'Texto extraído con ToText');
-                                  break;
-                                case 'delete':
-                                  _deleteHistoryEntry(entry.id);
-                                  break;
-                              }
-                            },
-                          ),
-                          onTap: () => _selectTextFromHistory(entry),
-                        ),
-                      );
-                    },
-                  ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildBottomAppBarWithButtons() {
-    return BottomAppBar(
-      color: Theme.of(context).colorScheme.surface,
-      child: Row(
-        children: [
-          // Botón de navegación a Inicio
-          Expanded(
-            child: IconButton(
-              onPressed: () {
-                setState(() {
-                  _selectedIndex = 0;
-                });
-              },
-              icon: Icon(
-                Icons.home,
-                size: 32,
-                color: _selectedIndex == 0 
-                    ? Theme.of(context).colorScheme.primary 
-                    : Theme.of(context).colorScheme.onSurface,
-              ),
-              tooltip: 'Inicio',
-            ),
-          ),
-          
-          // Separador vertical
-          Container(
-            height: 30,
-            width: 1,
-            color: Colors.grey.shade300,
-          ),
-          
-          // Botón de cámara
-          Expanded(
-            child: IconButton(
-              onPressed: _isLoading ? null : () {
-                showModalBottomSheet(
-                  context: context,
-                  builder: (BuildContext context) {
-                    return SafeArea(
-                      child: Wrap(
-                        children: [
-                          ListTile(
-                            leading: const Icon(Icons.camera_alt),
-                            title: const Text('Tomar foto'),
-                            onTap: () {
-                              Navigator.pop(context);
-                              _takePhotoAndExtractText();
-                            },
-                          ),
-                          ListTile(
-                            leading: const Icon(Icons.photo_library),
-                            title: const Text('Seleccionar de galería'),
-                            onTap: () {
-                              Navigator.pop(context);
-                              _pickImageFromGallery();
-                            },
-                          ),
-                        ],
-                      ),
-                    );
-                  },
-                );
-              },
-              icon: const Icon(
-                Icons.camera_alt,
-                size: 32,
-              ),
-              tooltip: 'Cámara',
-            ),
-          ),
-          
-          // Separador vertical
-          Container(
-            height: 30,
-            width: 1,
-            color: Colors.grey.shade300,
-          ),
-          
-          // Botón de micrófono
-          Expanded(
-            child: IconButton(
-              onPressed: _speechEnabled 
-                  ? (_isListening ? _stopListening : _startListening)
-                  : () => _showError('Reconocimiento de voz no disponible'),
-              icon: Icon(
-                _isListening ? Icons.mic : (_speechEnabled ? Icons.mic : Icons.mic_off),
-                size: 32,
-                color: _isListening 
-                    ? Colors.red 
-                    : (_speechEnabled 
-                        ? Theme.of(context).colorScheme.onSurface 
-                        : Colors.grey.shade400),
-              ),
-              tooltip: _isListening 
-                  ? 'Detener grabación' 
-                  : (_speechEnabled ? 'Grabar voz' : 'Voz no disponible'),
-            ),
-          ),
-          
-          // Separador vertical
-          Container(
-            height: 30,
-            width: 1,
-            color: Colors.grey.shade300,
-          ),
-          
-          // Botón de navegación a Historial
-          Expanded(
-            child: IconButton(
-              onPressed: () {
-                setState(() {
-                  _selectedIndex = 1;
-                });
-              },
-              icon: Icon(
-                Icons.history,
-                size: 32,
-                color: _selectedIndex == 1 
-                    ? Theme.of(context).colorScheme.primary 
-                    : Theme.of(context).colorScheme.onSurface,
-              ),
-              tooltip: 'Historial',
+            child: HistoryListWidget(
+              textHistory: _textHistory,
+              onSelectText: _selectTextFromHistory,
+              onDeleteEntry: _deleteHistoryEntry,
             ),
           ),
         ],
       ),
     );
-  }
-
-  String _formatDate(DateTime date) {
-    final now = DateTime.now();
-    final difference = now.difference(date);
-    
-    if (difference.inDays == 0) {
-      return '${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
-    } else if (difference.inDays == 1) {
-      return 'Ayer';
-    } else if (difference.inDays < 7) {
-      return '${difference.inDays} días';
-    } else {
-      return '${date.day}/${date.month}/${date.year}';
-    }
   }
 }
