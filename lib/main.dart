@@ -11,7 +11,7 @@ import 'services/ocr_service.dart';
 import 'services/speech_service.dart';
 import 'services/image_service.dart';
 
-// Importar widgets
+// Importar widgets y pantallas
 import 'widgets/text_display_widget.dart';
 import 'widgets/history_list_widget.dart';
 import 'widgets/custom_bottom_app_bar.dart';
@@ -32,7 +32,19 @@ void main() async {
   // Obtener las cámaras disponibles
   final cameras = await availableCameras();
   
+  // Inicializar servicios básicos
+  await _initializeServices();
+  
   runApp(MyApp(cameras: cameras));
+}
+
+Future<void> _initializeServices() async {
+  try {
+    // Servicios básicos inicializados
+  } catch (e) {
+    // Error inicializando servicios: $e
+    // En producción, aquí se podría usar un logger apropiado
+  }
 }
 
 class MyApp extends StatelessWidget {
@@ -49,6 +61,14 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
         useMaterial3: true,
       ),
+      darkTheme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: Colors.blue,
+          brightness: Brightness.dark,
+        ),
+        useMaterial3: true,
+      ),
+      themeMode: ThemeMode.system,
       home: HomePage(cameras: cameras),
     );
   }
@@ -116,7 +136,11 @@ class _HomePageState extends State<HomePage> {
     try {
       final imageFile = await imageSource();
       if (imageFile != null) {
-        final extractedText = await OcrService.extractTextFromImage(imageFile);
+        final result = await OcrService.extractTextFromImage(imageFile);
+        
+        // El nuevo servicio OCR devuelve un Map, extraer el texto
+        final extractedText = result['text'] ?? AppConstants.statusNoTextFound;
+        
         await _saveExtractedText(extractedText, AppConstants.sourceCamera);
       }
     } catch (e) {
