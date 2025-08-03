@@ -29,6 +29,7 @@ class AppConstants {
   // Etiquetas de UI
   static const String homeTitle = 'ToText - OCR y Voz';
   static const String historyTitle = 'Historial';
+  static const String searchTitle = 'Buscar';
   static const String historyEmptyMessage = 'No hay textos guardados aún';
   static const String textAreaPlaceholder = 'El texto extraído aparecerá aquí...\n\n• Toca el botón de cámara para tomar una foto y extraer texto\n• Selecciona de galería para procesar imágenes existentes\n• Usa el micrófono para convertir tu voz en texto\n• Una vez que tengas texto, podrás editarlo y compartirlo\n• Ve al historial para revisar textos anteriores';
   static const String editHint = 'Edita tu texto aquí...';
@@ -43,6 +44,7 @@ class AppConstants {
   static const String tooltipHome = 'Inicio';
   static const String tooltipCamera = 'Cámara';
   static const String tooltipHistory = 'Historial';
+  static const String tooltipSettings = 'Configuración';
   static const String tooltipStopRecording = 'Detener grabación';
   static const String tooltipStartRecording = 'Grabar voz';
   static const String tooltipVoiceNotAvailable = 'Voz no disponible';

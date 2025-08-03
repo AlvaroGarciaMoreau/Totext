@@ -4,7 +4,7 @@
 ![Dart](https://img.shields.io/badge/Dart-0175C2?style=for-the-badge&logo=dart&logoColor=white)
 ![Android](https://img.shields.io/badge/Android-3DDC84?style=for-the-badge&logo=android&logoColor=white)
 ![iOS](https://img.shields.io/badge/iOS-000000?style=for-the-badge&logo=ios&logoColor=white)
-![Version](https://img.shields.io/badge/Version-2.0.0-brightgreen?style=for-the-badge)
+![Version](https://img.shields.io/badge/Version-2.1.0-brightgreen?style=for-the-badge)
 ![License](https://img.shields.io/badge/License-MIT-blue?style=for-the-badge)
 ![Tests](https://img.shields.io/badge/Tests-Passing-success?style=for-the-badge)
 
@@ -31,16 +31,25 @@
 - 📚 **Masiva**: Traducción por lotes de múltiples textos
 
 ### 🎨 **Interfaz Moderna**
-- 🌓 **Temas**: Modo oscuro/claro con persistencia
+- 🌓 **Temas**: Modo oscuro/claro/automático con persistencia
 - ♿ **Accesible**: Alto contraste y tamaño de fuente ajustable
-- 🎭 **Animaciones**: Transiciones suaves con Lottie
+- 🎭 **Animaciones**: Transiciones suaves con control de velocidad
 - 📱 **Responsive**: Adaptado a todos los tamaños de pantalla
+- 🧭 **Navegación**: Sistema de 3 pantallas (Inicio, Historial, Búsqueda)
 
 ### 🔍 **Búsqueda y Organización**
 - ⚡ **Tiempo Real**: Búsqueda instantánea mientras escribes
 - 🏷️ **Categorías**: Sistema de etiquetas y categorización
 - 📅 **Filtros**: Por fecha, fuente, categoría, idioma
 - 📝 **Historial**: Almacenamiento de búsquedas frecuentes
+- 🎯 **Pantalla Dedicada**: Interface especializada para búsqueda avanzada
+
+### ⚙️ **Configuración Avanzada**
+- 🎨 **Personalización**: Temas, colores y tipografía personalizables
+- 🌐 **Multiidioma**: Configuración independiente para UI y OCR
+- ♿ **Accesibilidad**: Controles completos de contraste y animaciones
+- ☁️ **Sincronización**: Gestión automática y manual de datos
+- 🔧 **Acceso Rápido**: Botón de configuración siempre disponible en AppBar
 
 ### 📤 **Exportación Avanzada**
 - 📄 **Formatos**: TXT, JSON, PDF con formateo personalizable
@@ -89,7 +98,7 @@ lib/
 ├── models/              # Modelos de dominio
 │   ├── text_entry.dart      # Entrada de texto con metadatos
 │   └── theme_preferences.dart # Preferencias de tema/accesibilidad
-├── providers/           # Gestión de estado
+├── providers/           # Gestión de estado (Provider Pattern)
 │   ├── theme_provider.dart    # Estado de temas y preferencias
 │   └── app_state_provider.dart # Estado global de la aplicación
 ├── screens/             # Pantallas principales
@@ -97,6 +106,24 @@ lib/
 │   └── search_screen.dart     # Búsqueda avanzada
 ├── services/            # Lógica de negocio
 └── widgets/             # Componentes UI reutilizables
+    ├── custom_bottom_app_bar.dart # Navegación de 3 pantallas
+    └── camera_options_sheet.dart  # Opciones de cámara
+```
+
+### 🔄 **Gestión de Estado**
+```dart
+// Provider Pattern para estado reactivo
+MultiProvider(
+  providers: [
+    ChangeNotifierProvider(create: (_) => ThemeProvider()),
+    ChangeNotifierProvider(create: (_) => AppStateProvider()),
+  ],
+  child: MaterialApp(
+    theme: themeProvider.lightTheme,
+    darkTheme: themeProvider.darkTheme,
+    themeMode: themeProvider.themeMode,
+  ),
+)
 ```
 
 ### 🧪 **Testing y Calidad**
@@ -184,7 +211,20 @@ static const String translationApiKey = 'tu-api-key';
 
 ## 📱 Guía de Uso
 
-### 🎯 **Flujos Principales**
+### 🧭 **Navegación Principal**
+
+La aplicación cuenta con **3 pantallas principales** accesibles desde el bottom navigation:
+
+1. **� Inicio**: Pantalla principal para OCR y reconocimiento de voz
+2. **📋 Historial**: Lista completa de textos extraídos con opciones de gestión
+3. **🔍 Búsqueda**: Interface avanzada con filtros y búsqueda en tiempo real
+
+#### ⚙️ **Acceso a Configuración**
+- **Botón de configuración**: Disponible en el AppBar de todas las pantallas
+- **Acceso rápido**: Toca el ícono ⚙️ desde cualquier ubicación
+- **Navegación por voz**: Di "configuración" o "settings"
+
+### �🎯 **Flujos Principales**
 
 #### 📸 **Extracción de Texto (OCR)**
 1. **Desde Cámara**: Botón cámara → Tomar foto → Texto extraído automáticamente
@@ -197,10 +237,18 @@ static const String translationApiKey = 'tu-api-key';
 3. **Multiidioma**: Cambiar idioma en configuración → Reconocimiento adaptado
 
 #### 🔍 **Búsqueda y Organización**
-1. **Búsqueda Rápida**: Escribir en barra de búsqueda → Resultados en tiempo real
-2. **Filtros Avanzados**: Aplicar filtros por fecha, categoría, idioma, etc.
-3. **Categorización**: Asignar categorías y etiquetas personalizadas
-4. **Historial**: Acceder a búsquedas frecuentes guardadas
+1. **Pantalla Dedicada**: Navegar a la pestaña de búsqueda
+2. **Búsqueda en Tiempo Real**: Escribir en barra → Resultados instantáneos
+3. **Filtros Avanzados**: Aplicar filtros por fecha, categoría, idioma, fuente
+4. **Historial de Búsqueda**: Acceso rápido a búsquedas frecuentes
+5. **Estadísticas**: Ver contadores de resultados filtrados
+
+#### ⚙️ **Configuración Personalizada**
+1. **Temas**: Cambiar entre claro, oscuro o automático (sigue el sistema)
+2. **Idiomas**: Configurar idioma de UI y idioma por defecto para OCR
+3. **Accesibilidad**: Ajustar tamaño de fuente, contraste y animaciones
+4. **Sincronización**: Configurar backup automático y manual
+5. **Categorías**: Establecer categoría por defecto para nuevas entradas
 
 #### 🌍 **Traducción**
 1. **Automática**: Activar en configuración → Traducción instantánea
@@ -221,12 +269,18 @@ static const String translationApiKey = 'tu-api-key';
 | "abrir galería" | "open gallery" | Abre selector de imágenes |
 | "escuchar" | "listen" | Inicia reconocimiento de voz |
 | "mostrar historial" | "show history" | Navega al historial |
+| "buscar" | "search" | Abre la pantalla de búsqueda |
 | "exportar" | "export" | Abre opciones de exportación |
 | "traducir" | "translate" | Traduce el texto actual |
-| "buscar" | "search" | Abre la búsqueda |
-| "configuración" | "settings" | Abre ajustes |
+| "configuración" | "settings" | Abre la pantalla de configuración |
 
 ### ⚙️ **Configuraciones Avanzadas**
+
+#### 🧭 **Navegación de la Aplicación**
+- **Bottom Navigation**: 3 pestañas principales (Inicio, Historial, Búsqueda)
+- **AppBar**: Botón de configuración siempre disponible
+- **Gestos**: Swipe entre pantallas para navegación rápida
+- **Comandos de Voz**: Control total por voz de la navegación
 
 #### 🎨 **Personalización de Temas**
 ```dart
@@ -438,8 +492,10 @@ Este proyecto está licenciado bajo la **Licencia MIT** - ver el archivo [LICENS
 ### 📊 **Estadísticas del Proyecto**
 
 #### 💻 **Métricas de Código**
-- **Líneas de código**: ~4,500+ líneas
-- **Archivos**: 25+ archivos principales
+- **Líneas de código**: ~5,000+ líneas
+- **Archivos**: 30+ archivos principales
+- **Providers**: 2 providers para gestión de estado
+- **Pantallas**: 3 pantallas principales + configuración
 - **Cobertura de tests**: 85%+ promedio
 - **Tiempo de compilación**: ~2 minutos
 - **Tamaño APK**: ~25MB (optimizado)
@@ -447,6 +503,11 @@ Este proyecto está licenciado bajo la **Licencia MIT** - ver el archivo [LICENS
 #### 🏆 **Hitos Alcanzados**
 - ✅ **v1.0**: OCR básico y voz a texto
 - ✅ **v2.0**: Arquitectura completa con todas las funcionalidades
+- ✅ **v2.1**: Navegación avanzada y configuración completa
+  - ✅ Sistema de 3 pantallas (Inicio, Historial, Búsqueda)
+  - ✅ Pantalla de configuración integrada con Provider
+  - ✅ Gestión de temas dinámicos (Claro/Oscuro/Automático)
+  - ✅ Configuración de accesibilidad y personalización
 - ✅ **Testing**: Cobertura >80% con pruebas automatizadas
 - ✅ **CI/CD**: Scripts de automatización para desarrollo
 - ✅ **Documentación**: README completo y documentación técnica

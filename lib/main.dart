@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:camera/camera.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:provider/provider.dart';
 import 'dart:io';
 
 // Importar modelos y servicios
@@ -16,6 +17,12 @@ import 'widgets/text_display_widget.dart';
 import 'widgets/history_list_widget.dart';
 import 'widgets/custom_bottom_app_bar.dart';
 import 'widgets/camera_options_sheet.dart';
+import 'screens/settings_screen.dart';
+import 'screens/search_screen.dart';
+
+// Importar providers
+import 'providers/theme_provider.dart';
+import 'providers/app_state_provider.dart';
 
 // Importar constantes
 import 'constants/app_constants.dart';
@@ -54,22 +61,39 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: AppConstants.appTitle,
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
-        useMaterial3: true,
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => ThemeProvider()),
+        ChangeNotifierProvider(create: (_) => AppStateProvider()),
+      ],
+      child: Consumer<ThemeProvider>(
+        builder: (context, themeProvider, child) {
+          return FutureBuilder(
+            future: themeProvider.isInitialized ? null : themeProvider.initialize(),
+            builder: (context, snapshot) {
+              if (!themeProvider.isInitialized) {
+                return MaterialApp(
+                  debugShowCheckedModeBanner: false,
+                  home: Scaffold(
+                    body: Center(
+                      child: CircularProgressIndicator(),
+                    ),
+                  ),
+                );
+              }
+              
+              return MaterialApp(
+                title: AppConstants.appTitle,
+                debugShowCheckedModeBanner: false,
+                theme: themeProvider.lightTheme,
+                darkTheme: themeProvider.darkTheme,
+                themeMode: themeProvider.themeMode,
+                home: HomePage(cameras: cameras),
+              );
+            },
+          );
+        },
       ),
-      darkTheme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: Colors.blue,
-          brightness: Brightness.dark,
-        ),
-        useMaterial3: true,
-      ),
-      themeMode: ThemeMode.system,
-      home: HomePage(cameras: cameras),
     );
   }
 }
@@ -97,6 +121,11 @@ class _HomePageState extends State<HomePage> {
     super.initState();
     _initServices();
     _loadData();
+    
+    // Inicializar el AppStateProvider después del build
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Provider.of<AppStateProvider>(context, listen: false).initialize();
+    });
   }
 
   @override
@@ -296,12 +325,46 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
+  void _openSettings() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => const SettingsScreen(),
+      ),
+    );
+  }
+
+  String _getAppBarTitle() {
+    switch (_selectedIndex) {
+      case 0:
+        return AppConstants.homeTitle;
+      case 1:
+        return AppConstants.historyTitle;
+      case 2:
+        return AppConstants.searchTitle;
+      default:
+        return AppConstants.homeTitle;
+    }
+  }
+
+  Widget _getCurrentView() {
+    switch (_selectedIndex) {
+      case 0:
+        return _buildMainView();
+      case 1:
+        return _buildHistoryView();
+      case 2:
+        return _buildSearchView();
+      default:
+        return _buildMainView();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        title: Text(_selectedIndex == 0 ? AppConstants.homeTitle : AppConstants.historyTitle),
+        title: Text(_getAppBarTitle()),
         actions: [
           if (_selectedIndex == 0 && _extractedText.isNotEmpty && !_isEditing)
             IconButton(
@@ -331,9 +394,15 @@ class _HomePageState extends State<HomePage> {
               onPressed: _clearText,
               tooltip: AppConstants.tooltipClear,
             ),
+          // Botón de configuración siempre visible
+          IconButton(
+            icon: const Icon(Icons.settings),
+            onPressed: _openSettings,
+            tooltip: AppConstants.tooltipSettings,
+          ),
         ],
       ),
-      body: _selectedIndex == 0 ? _buildMainView() : _buildHistoryView(),
+      body: _getCurrentView(),
       bottomNavigationBar: CustomBottomAppBar(
         selectedIndex: _selectedIndex,
         isLoading: _isLoading,
@@ -407,6 +476,14 @@ class _HomePageState extends State<HomePage> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildSearchView() {
+    return Consumer<AppStateProvider>(
+      builder: (context, appStateProvider, child) {
+        return SearchScreen(appStateProvider: appStateProvider);
+      },
     );
   }
 }

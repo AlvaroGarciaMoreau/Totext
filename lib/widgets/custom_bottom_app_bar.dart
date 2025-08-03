@@ -96,6 +96,28 @@ class CustomBottomAppBar extends StatelessWidget {
             color: Colors.grey.shade300,
           ),
           
+          // Botón de navegación a Búsqueda
+          Expanded(
+            child: IconButton(
+              onPressed: () => onIndexChanged(2),
+              icon: Icon(
+                Icons.search,
+                size: 32,
+                color: selectedIndex == 2 
+                    ? Theme.of(context).colorScheme.primary 
+                    : Theme.of(context).colorScheme.onSurface,
+              ),
+              tooltip: 'Buscar',
+            ),
+          ),
+          
+          // Separador vertical
+          Container(
+            height: 30,
+            width: 1,
+            color: Colors.grey.shade300,
+          ),
+          
           // Botón de navegación a Historial
           Expanded(
             child: IconButton(
