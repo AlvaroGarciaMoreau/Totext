@@ -3,6 +3,13 @@ import '../models/text_entry.dart';
 import '../database/database_helper.dart';
 import '../services/cloud_sync_service.dart';
 import '../services/translation_service.dart';
+import '../services/ocr_service.dart';
+import '../services/speech_service.dart';
+import '../services/image_service.dart';
+import '../services/storage_service.dart';
+import '../constants/app_constants.dart';
+import 'package:share_plus/share_plus.dart';
+import 'dart:io';
 
 class AppStateProvider extends ChangeNotifier {
   final DatabaseHelper _dbHelper = DatabaseHelper();
@@ -16,6 +23,11 @@ class AppStateProvider extends ChangeNotifier {
   bool _isLoading = false;
   String? _error;
   
+  // Home page state
+  String _extractedText = '';
+  bool _isProcessing = false;
+  final SpeechService _speechService = SpeechService();
+  
   // Getters
   List<TextEntry> get textEntries => _filteredEntries;
   List<TextEntry> get allEntries => _textEntries;
@@ -23,14 +35,26 @@ class AppStateProvider extends ChangeNotifier {
   String get selectedCategory => _selectedCategory;
   String get selectedSource => _selectedSource;
   DateTimeRange? get dateRange => _dateRange;
-  bool get isLoading => _isLoading;
+  bool get isLoading => _isLoading || _isProcessing;
   String? get error => _error;
+  
+  String get extractedText => _extractedText;
+  bool get isListening => _speechService.isListening;
+  bool get isSpeechInitialized => _speechService.isInitialized;
   
   int get totalEntries => _textEntries.length;
   int get filteredCount => _filteredEntries.length;
 
   Future<void> initialize() async {
     await loadEntries();
+    await _speechService.initialize();
+    await _loadCurrentText();
+    notifyListeners();
+  }
+
+  Future<void> _loadCurrentText() async {
+    final currentData = await StorageService.loadCurrentText();
+    _extractedText = currentData['text'] ?? '';
   }
 
   Future<void> loadEntries() async {
@@ -302,5 +326,123 @@ class AppStateProvider extends ChangeNotifier {
   void clearError() {
     _error = null;
     notifyListeners();
+  }
+
+  // Home Page Methods
+  Future<void> processImageFromCamera() async {
+    await _processImageSource(() => ImageService.takePhotoFromCamera());
+  }
+
+  Future<void> processImageFromGallery() async {
+    await _processImageSource(() => ImageService.pickImageFromGallery());
+  }
+
+  Future<void> _processImageSource(Future<File?> Function() imageSource) async {
+    _isProcessing = true;
+    notifyListeners();
+
+    try {
+      final imageFile = await imageSource();
+      if (imageFile != null) {
+        final result = await OcrService.extractTextFromImage(imageFile);
+        final text = result['text'] ?? AppConstants.statusNoTextFound;
+        await saveExtractedText(text, AppConstants.sourceCamera);
+      }
+    } catch (e) {
+      _setError(e.toString());
+    } finally {
+      _isProcessing = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> saveExtractedText(String text, String source) async {
+    if (text != AppConstants.statusNoTextFound) {
+      final entry = TextEntry(
+        id: TextEntry.generateId(),
+        text: text,
+        source: source,
+        timestamp: DateTime.now(),
+      );
+      
+      await addEntry(entry);
+      await StorageService.saveCurrentText(text, source);
+      _extractedText = text;
+    } else {
+      _extractedText = text;
+    }
+    notifyListeners();
+  }
+
+  Future<void> startListening() async {
+    _extractedText = AppConstants.statusListening;
+    notifyListeners();
+
+    await _speechService.startListening(
+      onResult: (text) async {
+        await saveExtractedText(text, AppConstants.sourceMicrophone);
+      },
+      onError: (error) {
+        _setError(error);
+        _extractedText = '';
+        notifyListeners();
+      },
+    );
+    notifyListeners();
+  }
+
+  Future<void> stopListening() async {
+    await _speechService.stopListening();
+    notifyListeners();
+  }
+
+  void handleMicrophonePress() {
+    if (_speechService.isListening) {
+      stopListening();
+    } else if (_speechService.isInitialized) {
+      startListening();
+    } else {
+      _setError(AppConstants.errorSpeechNotAvailable);
+    }
+  }
+
+  void shareText(String text) {
+    if (text.isNotEmpty && 
+        text != AppConstants.statusListening && 
+        text != AppConstants.statusNoAudioDetected && 
+        text != AppConstants.statusNoTextFound) {
+      // ignore: deprecated_member_use
+      Share.share(text, subject: AppConstants.shareSubject);
+    } else {
+      _setError(AppConstants.errorNoTextToShare);
+    }
+  }
+
+  Future<void> clearText() async {
+    await StorageService.clearCurrentText();
+    _extractedText = '';
+    notifyListeners();
+  }
+
+  Future<void> saveEditedText(String editedText) async {
+    if (editedText.trim().isNotEmpty) {
+      final entry = TextEntry(
+        id: TextEntry.generateId(),
+        text: editedText.trim(),
+        source: AppConstants.sourceEdited,
+        timestamp: DateTime.now(),
+      );
+      
+      await addEntry(entry);
+      await StorageService.saveCurrentText(editedText.trim(), AppConstants.sourceEdited);
+      _extractedText = editedText.trim();
+      notifyListeners();
+    }
+  }
+
+  @override
+  void dispose() {
+    OcrService.dispose();
+    super.dispose();
   }
 }

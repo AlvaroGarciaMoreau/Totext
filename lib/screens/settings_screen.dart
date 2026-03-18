@@ -55,35 +55,29 @@ class _SettingsScreenState extends State<SettingsScreen> {
               style: Theme.of(context).textTheme.titleLarge,
             ),
             const SizedBox(height: 16),
-            RadioListTile<AppThemeMode>(
-              title: const Text('Claro'),
-              value: AppThemeMode.light,
+            RadioGroup<AppThemeMode>(
               groupValue: themeProvider.preferences.themeMode,
               onChanged: (value) {
                 if (value != null) {
                   themeProvider.setThemeMode(value);
                 }
               },
-            ),
-            RadioListTile<AppThemeMode>(
-              title: const Text('Oscuro'),
-              value: AppThemeMode.dark,
-              groupValue: themeProvider.preferences.themeMode,
-              onChanged: (value) {
-                if (value != null) {
-                  themeProvider.setThemeMode(value);
-                }
-              },
-            ),
-            RadioListTile<AppThemeMode>(
-              title: const Text('Automático (del sistema)'),
-              value: AppThemeMode.system,
-              groupValue: themeProvider.preferences.themeMode,
-              onChanged: (value) {
-                if (value != null) {
-                  themeProvider.setThemeMode(value);
-                }
-              },
+              child: Column(
+                children: [
+                  RadioListTile<AppThemeMode>(
+                    title: const Text('Claro'),
+                    value: AppThemeMode.light,
+                  ),
+                  RadioListTile<AppThemeMode>(
+                    title: const Text('Oscuro'),
+                    value: AppThemeMode.dark,
+                  ),
+                  RadioListTile<AppThemeMode>(
+                    title: const Text('Automático (del sistema)'),
+                    value: AppThemeMode.system,
+                  ),
+                ],
+              ),
             ),
           ],
         ),

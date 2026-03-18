@@ -35,8 +35,8 @@ class CloudSyncService {
     }
 
     // Escuchar cambios de conectividad
-    Connectivity().onConnectivityChanged.listen((ConnectivityResult result) {
-      if (result != ConnectivityResult.none && autoSyncEnabled) {
+    Connectivity().onConnectivityChanged.listen((results) {
+      if (results.isNotEmpty && results.first != ConnectivityResult.none && autoSyncEnabled) {
         syncAll();
       }
     });
@@ -54,8 +54,8 @@ class CloudSyncService {
   }
 
   static Future<bool> isConnected() async {
-    final connectivityResult = await Connectivity().checkConnectivity();
-    return connectivityResult != ConnectivityResult.none;
+    final connectivityResults = await Connectivity().checkConnectivity();
+    return connectivityResults.isNotEmpty && connectivityResults.first != ConnectivityResult.none;
   }
 
   static Future<SyncResult> syncAll() async {

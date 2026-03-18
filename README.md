@@ -4,11 +4,11 @@
 ![Dart](https://img.shields.io/badge/Dart-0175C2?style=for-the-badge&logo=dart&logoColor=white)
 ![Android](https://img.shields.io/badge/Android-3DDC84?style=for-the-badge&logo=android&logoColor=white)
 ![iOS](https://img.shields.io/badge/iOS-000000?style=for-the-badge&logo=ios&logoColor=white)
-![Version](https://img.shields.io/badge/Version-2.1.0-brightgreen?style=for-the-badge)
+![Version](https://img.shields.io/badge/Version-2.2.0-brightgreen?style=for-the-badge)
 ![License](https://img.shields.io/badge/License-MIT-blue?style=for-the-badge)
 ![Tests](https://img.shields.io/badge/Tests-Passing-success?style=for-the-badge)
 
-> 🚀 **Aplicación Flutter completa para extraer texto de imágenes (OCR) y convertir voz a texto, con funcionalidades avanzadas de gestión, traducción y sincronización.**
+> 🚀 **Aplicación Flutter refactorizada para extraer texto de imágenes (OCR) y convertir voz a texto, con dependencias actualizadas y arquitectura optimizada.**
 
 ## ✨ Características Destacadas
 

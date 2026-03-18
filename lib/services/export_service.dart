@@ -188,10 +188,12 @@ class ExportService {
   }
 
   static Future<void> shareFile(File file, String title) async {
+    // ignore: deprecated_member_use
     await Share.shareXFiles([XFile(file.path)], text: title);
   }
 
   static Future<void> shareText(String text, String title) async {
+    // ignore: deprecated_member_use
     await Share.share(text, subject: title);
   }
 

@@ -85,6 +85,7 @@ class HistoryListWidget extends StatelessWidget {
                     onSelectText(entry);
                     break;
                   case 'share':
+                    // ignore: deprecated_member_use
                     Share.share(entry.text, subject: AppConstants.shareSubject);
                     break;
                   case 'delete':

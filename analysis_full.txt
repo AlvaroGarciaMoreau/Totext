@@ -1,0 +1,27 @@
+Analyzing Totext...                                             
+
+warning - Unused import: 'package:share_plus/share_plus.dart' - lib\main.dart:4:8 - unused_import
+warning - Unused import: 'dart:io' - lib\main.dart:6:8 - unused_import
+warning - Unused import: 'services/storage_service.dart' - lib\main.dart:10:8 - unused_import
+warning - Unused import: 'services/ocr_service.dart' - lib\main.dart:11:8 - unused_import
+warning - Unused import: 'services/speech_service.dart' - lib\main.dart:12:8 - unused_import
+warning - Unused import: 'services/image_service.dart' - lib\main.dart:13:8 - unused_import
+   info - 'Share' is deprecated and shouldn't be used. Use SharePlus instead - lib\providers\app_state_provider.dart:414:7 - deprecated_member_use
+   info - 'share' is deprecated and shouldn't be used. Use SharePlus.instance.share() instead - lib\providers\app_state_provider.dart:414:13 - deprecated_member_use
+   info - 'groupValue' is deprecated and shouldn't be used. Use a RadioGroup ancestor to manage group value instead. This feature was deprecated after v3.32.0-0.0.pre - lib\screens\settings_screen.dart:61:15 - deprecated_member_use
+   info - 'onChanged' is deprecated and shouldn't be used. Use RadioGroup to handle value change instead. This feature was deprecated after v3.32.0-0.0.pre - lib\screens\settings_screen.dart:62:15 - deprecated_member_use
+   info - 'groupValue' is deprecated and shouldn't be used. Use a RadioGroup ancestor to manage group value instead. This feature was deprecated after v3.32.0-0.0.pre - lib\screens\settings_screen.dart:71:15 - deprecated_member_use
+   info - 'onChanged' is deprecated and shouldn't be used. Use RadioGroup to handle value change instead. This feature was deprecated after v3.32.0-0.0.pre - lib\screens\settings_screen.dart:72:15 - deprecated_member_use
+   info - 'groupValue' is deprecated and shouldn't be used. Use a RadioGroup ancestor to manage group value instead. This feature was deprecated after v3.32.0-0.0.pre - lib\screens\settings_screen.dart:81:15 - deprecated_member_use
+   info - 'onChanged' is deprecated and shouldn't be used. Use RadioGroup to handle value change instead. This feature was deprecated after v3.32.0-0.0.pre - lib\screens\settings_screen.dart:82:15 - deprecated_member_use
+  error - The argument type 'void Function(ConnectivityResult)' can't be assigned to the parameter type 'void Function(List<ConnectivityResult>)?'.  - lib\services\cloud_sync_service.dart:38:49 - argument_type_not_assignable
+   info - The type of the right operand ('ConnectivityResult') isn't a subtype or a supertype of the left operand ('List<ConnectivityResult>') - lib\services\cloud_sync_service.dart:58:31 - unrelated_type_equality_checks
+   info - 'Share' is deprecated and shouldn't be used. Use SharePlus instead - lib\services\export_service.dart:191:11 - deprecated_member_use
+   info - 'shareXFiles' is deprecated and shouldn't be used. Use SharePlus.instance.share() instead - lib\services\export_service.dart:191:17 - deprecated_member_use
+   info - 'Share' is deprecated and shouldn't be used. Use SharePlus instead - lib\services\export_service.dart:195:11 - deprecated_member_use
+   info - 'share' is deprecated and shouldn't be used. Use SharePlus.instance.share() instead - lib\services\export_service.dart:195:17 - deprecated_member_use
+   info - 'Share' is deprecated and shouldn't be used. Use SharePlus instead - lib\widgets\history_list_widget.dart:88:21 - deprecated_member_use
+   info - 'share' is deprecated and shouldn't be used. Use SharePlus.instance.share() instead - lib\widgets\history_list_widget.dart:88:27 - deprecated_member_use
+warning - The asset directory 'assets/animations/' doesn't exist - pubspec.yaml:133:7 - asset_directory_does_not_exist
+warning - The asset directory 'assets/icons/' doesn't exist - pubspec.yaml:134:7 - asset_directory_does_not_exist
+
